@@ -1,0 +1,1 @@
+var GROQ_KEY = '';

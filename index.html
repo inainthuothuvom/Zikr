@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0f0d">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="secrets.js"></script>
+    <script>
+        const SUPABASE_URL = SECRETS.SUPABASE_URL;
+        const SUPABASE_ANON_KEY = SECRETS.SUPABASE_ANON_KEY;
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="mainHeader" style="position:sticky; top:0; z-index:100; background:#161b22; border:1px solid #30363d; border-radius:0; padding:6px 14px 6px; box-sizing:border-box; text-align:center;">
+    <div id="connBanner" class="conn-banner" style="display:none;"></div>
+    <div id="hadiyaActionBar" class="hadiya-action-bar">
+        <button id="hadiyaMenuBtn" onclick="openHadiyaMenuModal()" class="menu-icon-btn">☰</button>
+        <button id="homeBtn" onclick="goToCurrentWeek()" class="menu-icon-btn" title="Current Week"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1m-6 0h6"/></svg></button>
+        <div style="flex:1;"></div>
+        <button id="authBtn" onclick="handleAuthClick()" class="auth-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>
+            <span id="authBtnText">Sign In</span>
+        </button>
+    </div>
+    <hr style="border:none;border-top:1px solid #30363d;margin:4px -14px;">
+    <div class="hadiya-note-title" style="margin-bottom:0; font-size:1.2rem; padding:8px 0 4px;">சொர்க்கத்தின் பாதை  <br><span style="font-size:0.7em;color:#8b949e;">Sorgatthin Pathai</span></div>
+</div>
+
+<div class="container">
+
+    <div class="hadiya-container" id="hadiyaBox" style="display:none;">
+        <span class="hadiya-title">This Week's Hadiya <br> இந்த வார ஹதியா</span>
+        <div id="hadCurrent" class="hadiya-main">Loading...</div>
+        
+        <button id="hadiyaShareBtn" class="btn-hadiya-share" onclick="copyHadiyaNoteToClipboard()" style="margin-top:8px; width:100%; padding:10px; font-size:0.85rem;">
+            Hadiya Note 📋
+        </button>
+        
+        <div class="hadiya-grid">
+            <div class="small-hadiya" id="prevSection" style="display:none;">
+                <a href="#" onclick="event.preventDefault(); navigateHadiya(-1);" style="text-decoration:none;display:block;">
+                    <span class="hadiya-title" style="font-size:0.65rem;cursor:pointer;">Previous Hadiya <br> கடந்த ஹதியா</span>
+                </a>
+                <div id="hadPrev"></div>
+            </div>
+            <div class="small-hadiya" id="nextSection">
+                <a href="#" onclick="event.preventDefault(); navigateHadiya(1);" style="text-decoration:none;display:block;">
+                    <span class="hadiya-title" style="font-size:0.65rem;cursor:pointer;">Next Hadiya <br> அடுத்த ஹதியா</span>
+                </a>
+                <div id="hadNext"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label>Selected Date & Time <br> தேதி & நேரம்</label>
+        <input type="datetime-local" id="dateInput">
+    </div>
+
+    <div class="form-group">
+        <label>Select Name <br> பெயரைத் தேர்ந்தெடுக்கவும்</label>
+        <div class="searchable-select-container">
+            <input type="text" id="userSearch" class="search-input" placeholder="Type to search..." autocomplete="off" onfocus="this.select(); openUserDropdown()" oninput="filterUserOptions()" onblur="setTimeout(closeUserDropdown, 200)" value="">
+            <div class="searchable-dropdown" id="userDropdown"></div>
+            <input type="hidden" id="userSelect" value="">
+        </div>
+    </div>
+
+    <button id="submitBtn" onclick="submitQuery()" disabled style="background:#1a5bc4;font-size:0.85rem;">
+        Show My Status <br> எனது நிலையைக் காட்டு
+    </button>
+
+    <button id="reportBtn" class="btn-secondary" onclick="openReportModal()" style="font-size:0.85rem;">
+        View Weekly Report <br> வாராந்திர அறிக்கை
+    </button>
+
+    <div id="loader">Fetching data...</div>
+
+    <div id="result">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div id="weekInfo" class="juz-badge" style="margin-bottom:0;"></div>
+            <span onclick="closeResult()" style="cursor:pointer; color:#8b949e; font-size:1.6rem; font-weight:700; line-height:1; padding:4px 8px; border-radius:4px; user-select:none;">&times;</span>
+        </div>
+
+        <div id="memberDisplay" style="margin-bottom:12px;">
+            <div style="font-size:1rem; font-weight:600; color:#e6edf3;" id="resMemberName"></div>
+            <div style="font-size:0.85rem; color:#8b949e;" id="resMemberNameTa"></div>
+        </div>
+
+        <div class="status-box" id="statusBoxContainer">
+            <div class="status-header">
+                <h3>Status <br> நிலை</h3>
+                <div>
+                    <button class="btn-unlock" id="unlockBtn" onclick="enableStatusEditing()">Edit</button>
+                    <button class="btn-close-edit" id="closeEditBtn" onclick="cancelStatusEditing()">Close / ரத்து செய்</button>
+                </div>
+            </div>
+            
+            <div class="status-display-banner" id="statusTextDisplay"></div>
+            
+            <div class="support-info-widget" id="mainSupportWidget">
+                <div class="support-header-row">
+                    <div id="supportDetailsBanner"></div>
+                    <div>
+                        <button class="btn-unlock-support" id="unlockSupportBtn" onclick="enableSupportStatusEditing()">Edit Support</button>
+                        <button class="btn-close-support-edit" id="closeSupportEditBtn" onclick="cancelSupportStatusEditing()">Close / ரத்து செய்</button>
+                    </div>
+                </div>
+
+                <div style="text-align:right; margin-top:4px;">
+                    <button class="time-toggle-btn" id="supportTimeToggle" onclick="toggleTimePicker('support')" style="display:none">⏱ Set Time / நேரம்</button>
+                </div>
+                <div class="time-picker-row" id="supportTimePickerRow">
+                    <input type="datetime-local" id="supportCustomTime">
+                    <button class="time-reset-btn" onclick="resetCustomTime('support')">Now / இப்போது</button>
+                </div>
+                <div class="support-buttons-grid" id="supportButtonsGroup" style="display: none;">
+                    <button class="btn-support-status-completed" id="supportCompletedBtn" onclick="submitSupportStatusDirect('Completed')">
+                        Completed ✅
+                    </button>
+                    <button class="btn-support-status-reciting" id="supportRecitingBtn" onclick="submitSupportStatusDirect('Reciting')">
+                        Reciting 🔄
+                    </button>
+                </div>
+            </div>
+            
+            <div class="future-lock-banner" id="futureScheduleLockBanner">
+                🔒 Updates are not allowed for future schedules.<br>எதிர்கால தேதிக்க்கு நிலையை புதுப்பிக்க இயலாது.
+            </div>
+            <div class="future-lock-banner" id="nextHadiyaLockBanner" style="display:none;"></div>
+            
+            <div class="support-assignment-widget" id="supportAssignmentWidget" style="display:none; margin-top:8px; padding:8px 12px; background:#1c2128; border-radius:6px; border:1px solid #30363d; font-size:0.8rem;">
+                <span style="color:#58a6ff; font-weight:600;">🤝 Support Reading:</span>
+                <span id="supportAssignmentDetails" style="color:#c9d1d9;"></span>
+                <span id="supportAssignmentStatusIcon" style="margin-left:4px;"></span>
+                <span>&nbsp;|&nbsp;</span>
+                <a href="#" onclick="openSupportAssignmentModal(); return false;" style="color:#58a6ff;font-weight:600;text-decoration:underline;">Update / மாற்ற</a>
+            </div>
+
+            <div style="text-align:right; margin-top:6px;">
+                <button class="time-toggle-btn" id="mainTimeToggle" onclick="toggleTimePicker('main')" style="display:none">⏱ Set Time / நேரம்</button>
+            </div>
+            <div class="time-picker-row" id="mainTimePickerRow">
+                <input type="datetime-local" id="mainCustomTime">
+                <button class="time-reset-btn" onclick="resetCustomTime('main')">Now / இப்போது</button>
+            </div>
+            <div class="status-buttons-container" id="statusButtonsGroup" style="display: none;">
+                <button class="btn-status-completed" id="completedActionBtn" onclick="submitDirectStatus('Completed')">
+                    Completed <br> நிறைவேற்றபட்டது ✓
+                </button>
+                <button class="btn-status-reciting" id="recitingActionBtn" onclick="submitDirectStatus('Reciting')">
+                    Reciting <br> ஓதிக்கொண்டிருக்கிறேன் 🔄
+                </button>
+                <button class="btn-status-exception" id="exceptionActionBtn" onclick="submitDirectStatus('Exception Raised')">
+                    Exception <br> விதிவிலக்கு ⚠️
+                </button>
+            </div>
+            
+            <span id="lastModLabel" class="last-modified-lbl"></span>
+        </div>
+    </div>
+
+    <div id="toastSnackbar" class="snackbar">This is a snackbar notification!</div>
+
+</div>
+
+<!-- ===== REPORT MODAL ===== -->
+<div id="reportModal" class="modal">
+    <div class="modal-content" style="width:100%;max-width:100%;height:100vh;max-height:100vh;margin:0;border-radius:0;padding:0;display:flex;flex-direction:column;background:#161b22;overflow:hidden;">
+        <div style="text-align:right;padding:3px 14px 0;flex:0 0 auto;">
+            <span class="close-btn" onclick="closeReportModal()">&times;</span>
+        </div>
+        <div class="group-box" style="border-top:1px solid #21262d;border-bottom:1px solid #21262d;padding:10px 14px;flex-shrink:0;">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+                <button id="shareBtn" class="btn-share" onclick="copyReportToClipboard()" style="margin-top:0;flex:1;min-width:80px;padding:10px;font-size:0.8rem;">
+                    Copy Report 📋
+                </button>
+                <button id="searchToggleBtn" onclick="toggleSearchBar()" style="margin-top:0;width:auto;flex:none;background:none;border:2px solid #30363d;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:8px;" title="Search">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e6edf3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+                <button id="bulkToggleBtn" class="btn-bulk-toggle" onclick="toggleBulkMode()" style="margin-top:0;flex:0.5;min-width:70px;padding:8px;font-size:0.8rem;">
+                    Bulk ⚡
+                </button>
+            </div>
+            <div class="filter-buttons" id="reportFilterButtons" style="margin-bottom:0;">
+                <button class="filter-btn active" data-filter="ALL" onclick="applyReportFilter('ALL')">All <br> அனைவர்</button>
+                <button class="filter-btn" data-filter="Completed" onclick="applyReportFilter('Completed')">Completed <br> முடித்தவர்</button>
+                <button class="filter-btn" data-filter="Reciting" onclick="applyReportFilter('Reciting')">Reciting <br> ஓதுபவர்</button>
+                <button class="filter-btn" data-filter="EXCEPTION_ALL" onclick="applyReportFilter('EXCEPTION_ALL')">Exception <br> விலக்கு</button>
+            </div>
+            <div class="bulk-panel" id="bulkPanel" style="margin-top:6px;">
+                <button style="background:#21262d;border:none;border-radius:8px;color:#c9d1d9;font-size:0.8rem;font-weight:600;padding:8px 10px;cursor:pointer;font-family:inherit;margin-top:0;width:auto;" onclick="toggleSelectAll()">Select All</button>
+                <button class="btn-bulk-apply" id="bulkApplyBtn" onclick="openBulkStep2()" disabled>Process 0</button>
+            </div>
+        </div>
+        <div id="reportCaptureArea" style="border-top:1px solid #21262d;flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 14px;">
+            <div id="reportTableWrapper">
+                <table class="report-table">
+                    <thead>
+                        <tr class="report-week-row">
+                            <th colspan="3" style="padding:8px 4px;border-bottom:2px solid #30363d;background:#0d1117;word-break:break-word;overflow:hidden;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%;">
+                                    <span style="font-size:0.8rem;font-weight:700;color:#c9b896;">Week / வாரம் : <span id="reportWeekLabel"></span></span>
+                                    <span class="report-count-badge" id="reportCountBadge">Count / எண்ணிக்கை - 0</span>
+                                </div>
+                            </th>
+                        </tr>
+                        <tr class="report-search-row" style="display:none;">
+                            <th colspan="3" style="padding:4px 0;border-bottom:1px solid #21262d;background:#0d1117;">
+                                <input type="text" id="reportSearchInput" class="report-search" placeholder="Search by name / பெயரால் தேட..." oninput="applyReportFilter()" onfocus="this.select(); scrollReportToResults()">
+                            </th>
+                        </tr>
+                        <tr class="report-col-header-row">
+                            <th class="bulk-checkbox-cell report-bulk-th" style="display:none;"></th>
+                            <th style="width:50%;" onclick="sortReportData('name')">Name <br> பெயர்<span class="sort-indicator" id="sortIndicatorName"></span></th>
+                            <th style="width:50%;" onclick="sortReportData('status')">Status <br> நிலை<span class="sort-indicator" id="sortIndicatorStatus"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTableBody">
+                        <tr>
+                            <td colspan="3" style="text-align:center;">Loading report card data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== HADIYA CAPTURE AREA ===== -->
+<div id="hadiyaCaptureArea" style="display:none;"><div class="hadiya-container" style="margin:0;border-radius:0;">
+    <span class="hadiya-title">This Week's Hadiya <br> இந்த வார ஹதியா</span>
+    <div id="hadCurrentCapture" class="hadiya-main">Loading...</div>
+    <div class="hadiya-grid">
+        <div class="small-hadiya"><span class="hadiya-title" style="font-size:0.65rem">Previous Hadiya <br> கடந்த ஹதியா</span><div id="hadPrevCapture"></div></div>
+        <div class="small-hadiya"><span class="hadiya-title" style="font-size:0.65rem">Next Hadiya <br> அடுத்த ஹதியா</span><div id="hadNextCapture"></div></div>
+    </div>
+</div></div>
+
+<!-- ===== BULK STEP 2 ===== -->
+<div class="confirm-overlay" id="bulkStep2Overlay">
+    <div class="confirm-box" style="max-width:380px;">
+        <div style="display:flex;justify-content:flex-end;align-items:center;width:100%;margin-bottom:4px;">
+            <span class="close-btn" onclick="closeBulkStep2()" style="font-size:1.5rem;">&times;</span>
+        </div>
+        <hr style="border:none;border-top:1px solid #30363d;margin:0 0 8px;">
+        <h3 style="margin:0 0 10px;color:#79c0ff;font-size:1rem;font-weight:600;">Bulk Update — Step 2</h3>
+        <div id="bulkStep2Info" style="font-size:0.85rem;color:#8b949e;margin-bottom:10px;">Loading...</div>
+        <div class="confirm-list" id="bulkStep2List" style="max-height:120px;"></div>
+        <div style="margin:14px 0 10px;font-weight:600;color:#c9d1d9;font-size:0.9rem;">Set status to:</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn-status-completed" onclick="selectBulkStatus('Completed')" style="flex:1;min-width:100px;margin-top:0;padding:12px 8px;font-size:0.8rem;">Completed ✓</button>
+            <button class="btn-status-reciting" onclick="selectBulkStatus('Reciting')" style="flex:1;min-width:100px;margin-top:0;padding:12px 8px;font-size:0.8rem;">Reciting 🔄</button>
+            <button class="btn-status-exception" onclick="selectBulkStatus('Exception Raised')" style="flex:1;min-width:100px;margin-top:0;padding:12px 8px;font-size:0.8rem;">Exception ⚠️</button>
+        </div>
+        <div style="text-align:right;margin-top:8px;">
+            <button class="time-toggle-btn" id="bulkstep2TimeToggle" onclick="toggleTimePicker('bulkstep2')" style="font-size:0.8rem;padding:4px 10px;">⏱ Set Time / நேரம்</button>
+        </div>
+        <div class="time-picker-row" id="bulkstep2TimePickerRow">
+            <input type="datetime-local" id="bulkstep2CustomTime">
+            <button class="time-reset-btn" onclick="resetCustomTime('bulkstep2')">Now / இப்போது</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn-confirm-no" onclick="closeBulkStep2()" style="flex:1;padding:10px;">Back / பின்</button>
+            <button class="btn-confirm-yes" id="bulkStep2ConfirmBtn" onclick="openBulkConfirm()" style="flex:1;padding:10px;" disabled>Continue</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== BULK CONFIRM ===== -->
+<div class="confirm-overlay" id="bulkConfirmOverlay">
+    <div class="confirm-box">
+        <h3>⚠️ Confirm</h3>
+        <div id="bulkConfirmInfo" style="font-size:0.9rem; color:#c9d1d9; margin-bottom:8px;"></div>
+        <div class="confirm-list" id="bulkConfirmList"></div>
+        <div class="confirm-actions">
+            <button class="btn-confirm-no" onclick="closeBulkConfirm()">Cancel / ரத்து</button>
+            <button class="btn-confirm-yes" id="bulkConfirmYesBtn" onclick="executeBulkUpdate()">Confirm / உறுதி</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== REPORT EDIT MODAL ===== -->
+<div id="reportEditModal" class="modal">
+    <div class="modal-content" style="max-width:360px;">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                <span class="close-btn" style="font-size:1.2rem;color:#e6edf3;position:static;" onclick="closeReportEditModal()">←</span>
+                <span class="close-btn" onclick="closeReportEditModal()">&times;</span>
+            </div>
+        </div>
+        <div class="modal-title" style="font-size:1rem;color:#79c0ff;margin-bottom:5px;">Update Status / நிலை மாற்ற</div>
+        <div style="margin-bottom:15px;">
+            <div style="font-weight:600; color:#e6edf3;" id="reportEditName"></div>
+            <div style="font-size:0.8rem; color:#8b949e; margin-top:4px;">Current: <span id="reportEditCurrentStatus"></span></div>
+        </div>
+        <div style="text-align:right; margin-top:8px;">
+            <button class="time-toggle-btn" id="reportTimeToggle" onclick="toggleTimePicker('report')">⏱ Set Time / நேரம்</button>
+        </div>
+        <div class="time-picker-row" id="reportTimePickerRow" style="flex-direction:column;align-items:stretch;">
+            <button class="time-reset-btn" onclick="resetCustomTime('report')" style="width:100%;">Now / இப்போது</button>
+            <input type="datetime-local" id="reportCustomTime">
+        </div>
+        <button class="btn-status-completed status-btn" onclick="submitReportEditStatus('Completed')" style="margin-top:0;">Completed ✓</button>
+        <button class="btn-status-reciting status-btn" onclick="submitReportEditStatus('Reciting')" style="margin-top:8px;">Reciting 🔄</button>
+        <button class="btn-status-exception status-btn" onclick="submitReportEditStatus('Exception Raised')" style="margin-top:8px;">Exception ⚠️</button>
+    </div>
+</div>
+
+<!-- ===== DEDICATION MODAL ===== -->
+<div id="dedicationModal" class="modal">
+    <div class="modal-content" style="max-width:500px;max-height:80vh;overflow-y:auto;">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                <span class="close-btn" style="font-size:1.2rem;color:#e6edf3;position:static;" onclick="closeDedicationModal(); openHadiyaMenuModal();">←</span>
+                <span class="close-btn" onclick="closeDedicationModal()">&times;</span>
+            </div>
+        </div>
+        <div class="modal-title" style="font-size:1rem;color:#d29922;margin-bottom:5px;">🎯 Add Dedication <br> அர்ப்பணிப்பை சேர்க்க</div>
+        <div style="font-size:0.8rem; color:#8b949e; margin-bottom:10px;">Add one or more dedications with intention <br> நோக்கத்தை கொண்ட பெயர்களை சேர்க்கவும்</div>
+        
+        <button class="btn-secondary" onclick="addDedicationEntry()" style="margin-top:4px; margin-bottom:8px; padding:8px; font-size:0.8rem; width:100%;">+ Add New Dedication</button>
+        
+        <div id="dedicationListContainer"></div>
+        
+        <button id="saveDedicationBtn" onclick="saveDedication()" style="margin-top:10px; padding:12px; background:#1f6feb; color:#fff; border:none; border-radius:8px; width:100%; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit;">Save Dedication <br> அர்பணிப்புச் சேமி</button>
+    </div>
+</div>
+
+<!-- ===== HADIYA MENU MODAL ===== -->
+<div id="hadiyaMenuModal" class="modal">
+    <div class="modal-content" style="max-width:380px;">
+        <div id="hadiyaMenuMain">
+            <div class="modal-header">
+                <div style="display:flex;justify-content:flex-end;align-items:center;width:100%;">
+                    <span class="close-btn" onclick="closeHadiyaMenuModal()">&times;</span>
+                </div>
+            </div>
+            <div class="modal-title" style="font-size:1rem;color:#c9b896;margin-bottom:5px;">☰ Hadiya Menu <br> ஹதியா மெனு</div>
+            <div id="hadiyaMenuDateRange" style="font-size:0.85rem;color:#58a6ff;font-weight:600;margin-bottom:12px;text-align:center;"></div>
+
+            <div style="border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:8px;">
+                <div style="font-size:0.75rem;color:#8b949e;margin-bottom:8px;font-weight:600;">Hadiya Settings / ஹதியா அமைப்புகள்</div>
+                <button onclick="openHadiyaMenuView('hadiyaMenuSchedule')" style="width:100%;padding:12px;margin-bottom:6px;background:#1c2128;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">
+                    ⏱ Schedule Settings<br>நேர அமைப்புகள்
+                </button>
+                <button onclick="closeHadiyaMenuModal(); setTimeout(function(){ openDedicationModal(); },200);" style="width:100%;padding:12px;margin-bottom:6px;background:#1c2128;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">
+                    🎯 Dedication Settings<br>அர்ப்பணிப்பு அமைப்புகள்
+                </button>
+                <button onclick="openHadiyaMenuView('hadiyaMenuStatus')" style="width:100%;padding:12px;background:#1c2128;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">
+                    ✅ Hadiya Status Update<br>ஹதியா நிலை புதுப்பிப்பு
+                </button>
+            </div>
+            <button id="manageMembersMenuItem" onclick="closeHadiyaMenuModal(); setTimeout(function(){ openMemberManager(); },200);" style="width:100%;padding:14px;background:#1c2128;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">
+                👥 Manage Members<br>உறுப்பினர்கள் மேலாண்மை
+            </button>
+        </div>
+
+        <div id="hadiyaMenuSchedule" style="display:none;">
+            <div class="modal-header">
+                <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                    <span class="close-btn" style="font-size:1.2rem;color:#e6edf3;position:static;" onclick="goBackHadiyaMenu()">←</span>
+                    <span class="close-btn" onclick="closeHadiyaMenuModal()">&times;</span>
+                </div>
+            </div>
+            <div class="modal-title" style="font-size:1rem;color:#c9b896;margin-bottom:5px;">Schedule / நேர அமைப்புகள்</div>
+            <div style="font-size:0.75rem;color:#8b949e;margin-bottom:8px;font-weight:600;">Schedule Times / நேர அமைப்புகள்</div>
+            <div id="hadiyaScheduleTimeAlert2" style="font-size:0.75rem;color:#f87171;margin-bottom:6px;"></div>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:0.75rem;color:#c9d1d9;display:block;margin-bottom:4px;">Countdown Deadline</label>
+                <input type="datetime-local" id="hadiyaDeadlineInput" style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:0.75rem;color:#c9d1d9;display:block;margin-bottom:4px;">Next Hadiya Start</label>
+                <input type="datetime-local" id="hadiyaNextStartInput" style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;">
+            </div>
+            <button id="hadiyaConfigSaveBtn" onclick="saveHadiyaScheduleTimes()" style="margin-top:4px;width:100%;padding:10px;font-size:0.8rem;background:#1f6feb;border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">Save Schedule Times<br>நேரத்தை சேமிக்க</button>
+        </div>
+
+        <div id="hadiyaMenuStatus" style="display:none;">
+            <div class="modal-header">
+                <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                    <span class="close-btn" style="font-size:1.2rem;color:#e6edf3;position:static;" onclick="goBackHadiyaMenu()">←</span>
+                    <span class="close-btn" onclick="closeHadiyaMenuModal()">&times;</span>
+                </div>
+            </div>
+            <div class="modal-title" style="font-size:1rem;color:#c9b896;margin-bottom:5px;">Status / நிலை</div>
+            <button id="hadiyaStatusCompleteBtn" onclick="closeHadiyaMenuModal(); updateHadiyaStatusUI('Completed');" style="width:100%;padding:14px;margin-bottom:8px;background:#0f3320;border:1px solid #238636;border-radius:8px;color:#3fb950;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">
+                ✅ Mark as Completed<br><span style="font-size:0.7rem;color:#8b949e;font-weight:400;">நிறைவேறியது</span>
+            </button>
+            <button id="hadiyaStatusProgressBtn" onclick="closeHadiyaMenuModal(); updateHadiyaStatusUI('Pending');" style="width:100%;padding:14px;background:#2d2200;border:1px solid #d29922;border-radius:8px;color:#e3b341;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">
+                🔄 Mark in Progress<br><span style="font-size:0.7rem;color:#8b949e;font-weight:400;">மீண்டும் தொடங்கு</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== HADIYA EDIT MODAL ===== -->
+<div id="hadiyaEditModal" class="modal">
+    <div class="modal-content" style="max-width:380px;">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:flex-end;align-items:center;width:100%;">
+                <span class="close-btn" onclick="closeHadiyaEditModal()">&times;</span>
+            </div>
+        </div>
+        <div class="modal-title" style="font-size:1rem;color:#79c0ff;margin-bottom:5px;">Edit Hadiya / ஹதியாவை மாற்ற</div>
+        <div style="margin-bottom:15px;">
+            <div id="hadiyaEditNominee" style="font-weight:600; color:#e6edf3;"></div>
+            <div style="font-size:0.8rem; color:#8b949e; margin-top:4px;">Status: <span id="hadiyaEditStatus"></span></div>
+        </div>
+        <button class="btn-status-completed status-btn" onclick="submitHadiyaEditComplete()" style="margin-top:0; padding:12px;">✅ Completed <br> நிறைவேறியது</button>
+        <button class="btn-status-reciting status-btn" onclick="openHadiyaEditDedication()" style="margin-top:8px; padding:12px;">🎯 Add Dedication <br> அர்ப்பணிப்பை சேர்க்க </button>
+    </div>
+</div>
+
+<!-- ===== REASSIGN MODAL ===== -->
+<div id="reassignModal" class="modal">
+    <div class="modal-content reassign-modal-content">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:flex-end;align-items:center;width:100%;">
+                <span class="close-btn" onclick="closeReassignModal()">&times;</span>
+            </div>
+        </div>
+        <div class="modal-title" style="font-size:1.15rem;color:#f87171;margin-bottom:5px;">⚠️ Exception Registered</div>
+        
+        <div class="reassign-meta-info" id="reassignMetaText">
+            Loading assignment details...
+        </div>
+
+        <div class="form-group">
+            <label style="font-size:0.85rem;">Backup Reader <br> ஆதரவு வாசகர்</label>
+            <div class="searchable-select-container">
+                <input type="text" id="supportUserSearch" class="search-input" placeholder="Type to search..." autocomplete="off"
+                    onfocus="this.select(); openSupportCandDropdown()"
+                    oninput="filterSupportCandidates()"
+                    onblur="setTimeout(closeSupportCandDropdown, 200)" value="">
+                <div class="searchable-dropdown" id="supportCandDropdown"></div>
+                <input type="hidden" id="supportUserSelect" value="">
+            </div>
+        </div>
+
+        <button id="reassignBtn" onclick="submitReassignment()">
+            Assign Reciting Partner <br> உதவி வாசகரை நியமி
+        </button>
+        <button class="btn-secondary" style="margin-top:8px; padding:10px;" onclick="closeReassignModal()">
+            Skip <br> பின்னர் செய்வேன்
+        </button>
+    </div>
+</div>
+
+<!-- ===== SUPPORT ASSIGNMENT MODAL ===== -->
+<div id="supportAssignmentModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:420px;">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:flex-end;align-items:center;width:100%;">
+                <span class="close-btn" onclick="closeSupportAssignmentModal()">&times;</span>
+            </div>
+        </div>
+        <div class="modal-title" style="color:#79c0ff;">🤝 உதவி வாசிப்பு நிலை / Support Status</div>
+        <div style="padding:12px 0;">
+            <div id="supportAssignmentModalInfo" style="font-size:0.85rem; color:#c9d1d9; margin-bottom:10px;"></div>
+            <div style="border-top:1px solid #30363d; padding-top:12px;">
+                <div style="font-size:0.8rem; color:#8b949e; margin-bottom:8px;">Update your support status / உங்கள் நிலையை புதுப்பிக்கவும்</div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-status-completed" onclick="submitSupportFromAssignment('Completed')" style="flex:1; padding:10px 8px; white-space:normal;">Completed ✅<br><span style="font-size:0.7rem;">நிறைவேற்றப்பட்டது</span></button>
+                    <button class="btn-status-reciting" onclick="submitSupportFromAssignment('Reciting')" style="flex:1; padding:10px 8px; white-space:normal;">Reciting 🔄<br><span style="font-size:0.7rem;">ஓதிக்கொண்டிருக்கிறேன்</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MEMBER MANAGER MODAL ===== -->
+<div id="memberManagerModal" class="modal">
+    <div class="modal-content" style="max-width:420px;">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                <span class="close-btn" style="font-size:1.2rem;color:#e6edf3;position:static;" onclick="closeMemberManager(); openHadiyaMenuModal();">←</span>
+                <span class="close-btn" onclick="closeMemberManager()">&times;</span>
+            </div>
+        </div>
+        <div class="modal-title" style="font-size:1rem;color:#79c0ff;margin-bottom:12px;">Manage Members<br>உறுப்பினர்கள்</div>
+        <div id="memberManagerBody">
+            <div style="margin-bottom:16px;">
+                <label style="font-size:0.75rem;color:#c9d1d9;display:block;margin-bottom:6px;">Select existing member to update<br>மாற்ற தேர்வு</label>
+                <div class="searchable-select-container">
+                    <input type="text" id="memberSearch" class="search-input" placeholder="Search member..." autocomplete="off" onfocus="this.select(); openMemberDropdown()" oninput="filterMemberOptions()" onblur="setTimeout(closeMemberDropdown, 200)" value="">
+                    <div class="searchable-dropdown" id="memberDropdown"></div>
+                    <input type="hidden" id="memberSelectId" value="">
+                </div>
+            </div>
+            <div style="text-align:center; margin-bottom:14px;">
+                <span style="color:#8b949e; font-size:0.75rem;">— or —</span>
+            </div>
+            <button onclick="resetMemberForm()" style="margin-bottom:16px; width:100%; padding:8px; background:transparent; border:1px dashed #30363d; border-radius:6px; color:#58a6ff; cursor:pointer; font-family:inherit; font-size:0.8rem;">
+                + Add New Member<br>புதிய உறுப்பினர்
+            </button>
+            <div id="memberFormFields" style="display:none;">
+                <input type="hidden" id="memberFormEditId" value="">
+                <div id="replaceSection" style="margin-bottom:16px;">
+                    <label style="font-size:0.75rem;color:#c9d1d9;display:block;margin-bottom:6px;">Replacing<br>மாற்றப்படுபவர்</label>
+                    <div class="searchable-select-container">
+                        <input type="text" id="replaceSearch" class="search-input" placeholder="Search member to replace..." autocomplete="off" onfocus="this.select(); openReplaceDropdown()" oninput="filterReplaceOptions()" onblur="setTimeout(closeReplaceDropdown, 200)" value="">
+                        <div class="searchable-dropdown" id="replaceDropdown"></div>
+                        <input type="hidden" id="replaceSelectId" value="">
+                    </div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:0.75rem;color:#c9d1d9;display:block;margin-bottom:6px;">Name (English)<br>பெயர் (ஆங்கிலம்)</label>
+                    <input type="text" id="memberFormNameEn" style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:0.75rem;color:#c9d1d9;display:block;margin-bottom:6px;">Name (Tamil)<br>பெயர் (தமிழ்)</label>
+                    <input type="text" id="memberFormNameTa" style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:0.75rem;color:#c9d1d9;display:block;margin-bottom:6px;">Effective Date<br>நடைமுறை தேதி</label>
+                    <input type="datetime-local" id="memberFormEffDate" style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="saveMember()" style="flex:1; padding:10px; background:#1f6feb; border:none; border-radius:6px; color:#fff; font-weight:600; cursor:pointer; font-family:inherit; font-size:0.8rem;">Save<br>சேமிக்க</button>
+                    <button onclick="cancelMemberForm()" class="btn-secondary" style="flex:1; padding:10px; font-size:0.8rem;">Cancel<br>ரத்து</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SIGN IN MODAL ===== -->
+<div id="signInModal" class="modal">
+    <div class="modal-content auth-modal-content">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:flex-end;align-items:center;width:100%;">
+                <span class="close-btn" onclick="closeSignInModal()">&times;</span>
+            </div>
+        </div>
+        <div class="modal-title">Sign In<br>உள்நுழைய</div>
+        <div class="auth-body">
+            <div class="form-group">
+                <label>Email or Phone<br>மின்னஞல் அல்லது தொலைபேசி</label>
+                <input type="text" id="authLoginInput" class="auth-input" placeholder="Email or phone number" autocomplete="off" oninput="clearAuthError()" onkeydown="if(event.key==='Enter')handleSignIn()">
+            </div>
+            <div class="form-group">
+                <label>Password<br>கடவுச்சொல்</label>
+                <div class="password-wrapper"><input type="password" id="authPassword" class="auth-input" placeholder="Enter password" oninput="clearAuthError()" onkeydown="if(event.key==='Enter')handleSignIn()"><button class="password-toggle" onclick="togglePassword('authPassword',this)" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            </div>
+            <div id="authError" class="auth-error"></div>
+            <button id="authSubmitBtn" onclick="handleSignIn()">Sign In<br>உள்நுழைய</button>
+            <div style="text-align:right;margin-top:8px;"><button class="btn-link" onclick="openForgotPasswordModal()" style="text-align:right;display:inline-block;">Forgot Password<br>கடவுச்சொல் மறந்துவிட்டதா?</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== RESET PASSWORD MODAL ===== -->
+<div id="resetPasswordModal" class="modal">
+    <div class="modal-content auth-modal-content">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:flex-end;align-items:center;width:100%;">
+                <span class="close-btn" onclick="handleResetPasswordSignOut()">&times;</span>
+            </div>
+        </div>
+        <div class="modal-title" style="color:#d29922;">Set New Password<br>புதிய கடவுச்சொல்</div>
+        <div class="auth-body">
+            <div style="background:#2d2200; border:1px solid #d29922; border-radius:10px; padding:12px; margin-bottom:16px; font-size:0.85rem; color:#e3b341; text-align:center;">
+                First-time login. Please set a new password.<br>முதல் முறை உள்நுழைவு. புதிய கடவுச்சொல்லை அமைக்கவும்.
+            </div>
+            <div class="form-group">
+                <label>New Password<br>புதிய கடவுச்சொல்</label>
+                <div class="password-wrapper"><input type="password" id="resetNewPassword" class="auth-input" placeholder="Min 6 characters" oninput="document.getElementById('resetError').textContent=''" onkeydown="if(event.key==='Enter')handleResetPassword()"><button class="password-toggle" onclick="togglePassword('resetNewPassword',this)" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            </div>
+            <div class="form-group">
+                <label>Confirm Password<br>கடவுச்சொல்லை உறுதிசெய்க</label>
+                <div class="password-wrapper"><input type="password" id="resetConfirmPassword" class="auth-input" placeholder="Re-enter password" oninput="document.getElementById('resetError').textContent=''" onkeydown="if(event.key==='Enter')handleResetPassword()"><button class="password-toggle" onclick="togglePassword('resetConfirmPassword',this)" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            </div>
+            <div id="resetError" class="auth-error"></div>
+            <button onclick="handleResetPassword()">Reset Password<br>கடவுச்சொல்லை மாற்று</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== RESET PASSWORD SIGN OUT CONFIRM ===== -->
+<div id="resetPasswordSignOutConfirmModal" class="confirm-overlay">
+    <div class="confirm-box" style="max-width:380px;">
+        <div style="display:flex;justify-content:flex-end;">
+            <span onclick="closeResetPasswordSignOutConfirmModal()" style="font-size:1.4rem;color:#8b949e;cursor:pointer;line-height:1;">&times;</span>
+        </div>
+        <h3>Cancel Password Reset?</h3>
+        <div class="confirm-list">
+            You are signing in for the first time and have not set a new password yet. If you cancel now, you will be signed out and asked to sign in again.
+        </div>
+        <div class="confirm-actions">
+            <button class="btn-confirm-no" onclick="cancelResetPasswordSignOut()">Stay Here<br>இங்கேயே இரு</button>
+            <button class="btn-confirm-yes" onclick="confirmResetPasswordSignOut()">Sign Out<br>வெளியேறு</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== FORGOT PASSWORD MODAL ===== -->
+<div id="forgotPasswordModal" class="modal">
+    <div class="modal-content auth-modal-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:0;">
+            <span id="forgotBackBtn" onclick="closeForgotPasswordModal(); openSignInModal();" style="font-size:1.3rem;color:#58a6ff;cursor:pointer;font-weight:bold;line-height:1;">←</span>
+            <span class="close-btn" onclick="closeForgotPasswordModal()">&times;</span>
+        </div>
+        <hr style="border:none;border-top:1px solid #30363d;margin:4px 0 8px;">
+        <div class="modal-title" style="color:#f87171;font-size:1rem;margin-bottom:10px;">Forgot Password<br>கடவுச்சொல் மறந்துவிட்டது</div>
+        <div class="auth-body">
+            <div id="forgotStep1">
+                <div class="form-group">
+                    <label>Email<br>மின்னஞல்</label>
+                    <input type="email" id="forgotEmail" class="auth-input" placeholder="Enter your email" autocomplete="off" oninput="clearForgotError()" onkeydown="if(event.key==='Enter')handleForgotSendOtp()">
+                </div>
+                <div id="forgotError" class="auth-error"></div>
+                <button id="forgotSendOtpBtn" onclick="handleForgotSendOtp()">Send OTP<br>OTP அனுப்பு</button>
+            </div>
+            <div id="forgotStep2" style="display:none;">
+                <div class="form-group">
+                    <label>Enter OTP<br>OTP ஐ உள்ளிடவும்</label>
+                    <input type="text" id="forgotOtpInput" class="auth-input" placeholder="6-digit OTP" maxlength="6" autocomplete="off" oninput="clearForgotError()" onkeydown="if(event.key==='Enter')handleForgotVerifyOtp()">
+                </div>
+                <div id="forgotOtpExpiry" style="font-size:0.75rem;color:#8b949e;text-align:center;margin-bottom:6px;"></div>
+                <div style="text-align:center;margin-bottom:4px;">
+                    <span id="forgotResendLink" onclick="handleForgotSendOtp()" style="font-size:0.75rem;color:#58a6ff;cursor:pointer;">Resend OTP / OTP மீண்டும் அனுப்பு</span>
+                </div>
+                <div id="forgotOtpError" class="auth-error"></div>
+                <button id="forgotVerifyOtpBtn" onclick="handleForgotVerifyOtp()">Verify OTP<br>OTP ஐ சரிபார்க்க</button>
+            </div>
+            <div id="forgotStep3" style="display:none;">
+                <div class="form-group">
+                    <label>New Password<br>புதிய கடவுச்சொல்</label>
+                    <div class="password-wrapper"><input type="password" id="forgotNewPassword" class="auth-input" placeholder="Min 6 characters" oninput="clearForgotError()" onkeydown="if(event.key==='Enter')handleForgotResetPassword()"><button class="password-toggle" onclick="togglePassword('forgotNewPassword',this)" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password<br>கடவுச்சொல்லை உறுதிசெய்க</label>
+                    <div class="password-wrapper"><input type="password" id="forgotConfirmPassword" class="auth-input" placeholder="Re-enter password" oninput="clearForgotError()" onkeydown="if(event.key==='Enter')handleForgotResetPassword()"><button class="password-toggle" onclick="togglePassword('forgotConfirmPassword',this)" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div id="forgotResetError" class="auth-error"></div>
+                <button id="forgotResetBtn" onclick="handleForgotResetPassword()">Reset Password<br>கடவுச்சொல்லை மாற்று</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ACCOUNT LOCKED MODAL ===== -->
+<div id="lockModal" class="modal">
+    <div class="modal-content auth-modal-content" style="max-width:400px;">
+        <div class="modal-header">
+            <div style="display:flex;justify-content:flex-end;align-items:center;width:100%;">
+                <span class="close-btn" onclick="closeLockModal()">&times;</span>
+            </div>
+        </div>
+        <hr style="border:none;border-top:1px solid #30363d;margin:4px 0 8px;">
+        <div class="modal-title" style="color:#f87171;font-size:1rem;margin-bottom:10px;">Account Locked<br>கணக்கு பூட்டப்பட்டது</div>
+        <div class="auth-body" style="text-align:center;">
+            <p style="font-size:0.85rem;color:#c9d1d9;margin-bottom:10px;">Too many failed attempts. Contact admin:</p>
+            <p id="lockModalAdminList" style="font-size:0.9rem;color:#58a6ff;font-weight:600;">Loading...</p>
+            <button onclick="closeLockModal()" style="margin-top:12px;">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SIGN OUT MODAL ===== -->
+<div id="signOutModal" class="confirm-overlay">
+    <div class="confirm-box" style="max-width:380px;">
+        <h3>Sign Out?</h3>
+        <div class="confirm-actions">
+            <button class="btn-confirm-no" onclick="closeSignOutModal()">Cancel / ரத்து</button>
+            <button class="btn-confirm-yes" onclick="handleSignOutConfirm()">Sign Out / வெளியேறு</button>
+        </div>
+    </div>
+</div>
+
+<script src="script-utils.js"></script>
+<script src="config.js"></script>
+<script src="script-email.js"></script>
+<script src="script-supabase.js"></script>
+<script src="script-auth.js"></script>
+<script src="script-hadiya.js"></script>
+<script src="script-report.js"></script>
+<script src="script-notify.js"></script>
+<script src="script-main.js"></script>
+</body>
+</html>
