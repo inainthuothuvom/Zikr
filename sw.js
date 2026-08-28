@@ -22,7 +22,10 @@ var urlsToCache = [
 self.addEventListener('install', function(event) {
     event.waitUntil(
         caches.open(CACHE_NAME).then(function(cache) {
-            return cache.addAll(urlsToCache);
+            // Add each URL individually so one 404 (e.g. secrets.js) doesn't fail the whole install
+            return Promise.all(urlsToCache.map(function(url) {
+                return cache.add(url).catch(function() { console.warn('SW cache skip:', url); });
+            }));
         }).then(function() {
             return self.skipWaiting();
         })
