@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#059669">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Sorgathin Pathai">
@@ -14,11 +15,11 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script src="secrets.js"></script>
+    <script src="secrets.js" onerror="console.warn('secrets.js not found, using inline fallback')"></script>
     <script>
-        const SUPABASE_URL = SECRETS.SUPABASE_URL;
-        const SUPABASE_ANON_KEY = SECRETS.SUPABASE_ANON_KEY;
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        var SUPABASE_URL = (typeof SECRETS !== 'undefined' && SECRETS.SUPABASE_URL) ? SECRETS.SUPABASE_URL : 'https://adclvohpxxeorbzaswle.supabase.co';
+        var SUPABASE_ANON_KEY = (typeof SECRETS !== 'undefined' && SECRETS.SUPABASE_ANON_KEY) ? SECRETS.SUPABASE_ANON_KEY : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkY2x2b2hweHhlb3JiemFzd2xlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NjA4MTUsImV4cCI6MjEwMzQzNjgxNX0.RuSKuPLQ2KkXdb75rg2r0j-BIO_EmFBtRqz70nNNadA';
+        var _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     </script>
     <link rel="stylesheet" href="style.css">
 </head>
