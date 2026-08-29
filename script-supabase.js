@@ -298,9 +298,34 @@
                 return m ? new Date(+m[1], +m[2]-1, +m[3]) : new Date(s);
             }
             var inputDate = ld(selectedDate); inputDate.setHours(0,0,0,0,0);
-            _supabase.from('hadiya_details').select('*').order('start_date', { ascending: true }).then(function(rH) {
+            Promise.all([
+                _supabase.from('hadiya_details').select('*').order('start_date', { ascending: true }),
+                _supabase.from('members').select('custom_id,name_en,name_ta,effective_date').order('custom_id', { ascending: true })
+            ]).then(function(results) {
+                var rH = results[0];
+                var rM = results[1];
                 if (!rH.data || rH.data.length === 0) { if (ok) ok(null); return; }
                 var hadData = rH.data;
+                var allMembers = rM.data || [];
+                // Helper: resolve hadiya nominee via members + effective_date, fallback to text
+                function resolveHadiyaName(row) {
+                    var mid = row.nominated_member_id || '';
+                    if (mid) {
+                        var active = filterActiveMembers(allMembers, row.start_date);
+                        for (var k = 0; k < active.length; k++) {
+                            if (String(active[k].custom_id) === String(mid)) {
+                                return { en: active[k].name_en || row.nominated_to || '', ta: active[k].name_ta || row.nominated_to_ta || '' };
+                            }
+                        }
+                        // Fallback: search all members by custom_id without effective filter
+                        for (var k2 = 0; k2 < allMembers.length; k2++) {
+                            if (String(allMembers[k2].custom_id) === String(mid)) {
+                                return { en: allMembers[k2].name_en || row.nominated_to || '', ta: allMembers[k2].name_ta || row.nominated_to_ta || '' };
+                            }
+                        }
+                    }
+                    return { en: row.nominated_to || '', ta: row.nominated_to_ta || '' };
+                }
                 var currentIdx = -1; var latestDate = null;
                 for (var i = 0; i < hadData.length; i++) {
                     var rd = ld(hadData[i].start_date); rd.setHours(0,0,0,0,0);
@@ -317,13 +342,15 @@
                     if (rd <= today && (!todayDate || rd > todayDate)) { todayDate = rd; todayIdx = i; }
                 }
                 var getRowData = function(idx) {
-                    if (idx < 0 || idx >= hadData.length || !hadData[idx].nominated_to) return null;
+                    if (idx < 0 || idx >= hadData.length) return null;
                     var row = hadData[idx];
+                    if (!row.nominated_to && !row.nominated_member_id) return null;
                     var startDate = ld(row.start_date);
                     var endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 6);
                     var rangeStr = formatDateDDMMM(startDate) + ' - ' + formatDateDDMMM(endDate);
-                    var nominatedTo = row.nominated_to || '';
-                    var nominatedToTa = row.nominated_to_ta || '';
+                    var resolved = resolveHadiyaName(row);
+                    var nominatedTo = resolved.en;
+                    var nominatedToTa = resolved.ta;
                     var dedicatedTo = row.dedicated_to || '';
                     var dedicatedToTa = row.dedicated_to_ta || '';
                     var hadiyaStatus = row.status || 'Pending';

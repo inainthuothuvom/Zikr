@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS weekly_status (
 CREATE TABLE IF NOT EXISTS hadiya_details (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     start_date TEXT NOT NULL UNIQUE,
+    nominated_member_id TEXT REFERENCES members(custom_id),
     nominated_to TEXT,
     nominated_to_ta TEXT,
     dedicated_to TEXT,

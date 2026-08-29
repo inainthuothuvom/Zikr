@@ -196,20 +196,20 @@
             '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 12px 0;">' +
 
             // Tamil Section
-            '<p style="font-size: 14px; font-weight: 600; margin: 0 0 6px; color: #1a73e8;">— தமிழ் —</p>' +
+            '<p style="font-size: 14px; font-weight: 600; margin: 0 0 6px; color: #059669;">— தமிழ் —</p>' +
             '<p style="font-size: 13px; margin: 0 0 10px;">' + escapeHtml(actionInfo.msgTa) + '</p>' +
             buildHTMLTable(taRows) +
 
             '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 12px 0;">' +
 
             // English Section
-            '<p style="font-size: 14px; font-weight: 600; margin: 0 0 6px; color: #1a73e8;">— English —</p>' +
+            '<p style="font-size: 14px; font-weight: 600; margin: 0 0 6px; color: #059669;">— English —</p>' +
             '<p style="font-size: 13px; margin: 0 0 10px;">' + escapeHtml(actionInfo.msgEn) + '</p>' +
             buildHTMLTable(enRows) +
 
             '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 12px 0;">' +
             '<p style="font-size: 12px; margin: 0 0 2px;">' +
-            '<a href="https://tinyurl.com/InainthuOthuvom" style="color: #1a73e8; text-decoration: none;">Dashboard →</a>' +
+            '<a href="https://tinyurl.com/InainthuOthuvom" style="color: #059669; text-decoration: none;">Dashboard →</a>' +
             '</p>' +
             '<p style="font-size: 11px; color: #80868b; margin: 0;">System Auto-Notification / தானியங்கி முறைமை அறிவிப்பு</p>' +
             '</div>';

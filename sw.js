@@ -1,4 +1,4 @@
-var CACHE_NAME = 'sorgathin-pathai-v2';
+var CACHE_NAME = 'sorgathin-pathai-v3';
 var urlsToCache = [
     './',
     './index.html',
@@ -57,6 +57,14 @@ self.addEventListener('fetch', function(event) {
             });
         })
     );
+});
+
+self.addEventListener('message', function(event) {
+    if (event.data && event.data.action === 'clearCache') {
+        caches.keys().then(function(names) {
+            names.forEach(function(name) { caches.delete(name); });
+        });
+    }
 });
 
 self.addEventListener('activate', function(event) {

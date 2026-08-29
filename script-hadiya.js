@@ -208,6 +208,21 @@ function navigateHadiya(dir) {
 }
 
 function goToCurrentWeek() {
+    // Clear all caches so latest data is fetched
+    try {
+        if (typeof fetchedStateCache !== 'undefined') fetchedStateCache = null;
+        if (typeof currentHadiyaDetails !== 'undefined') currentHadiyaDetails = null;
+        if (typeof rawReportData !== 'undefined') rawReportData = [];
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                names.forEach(function(name) { caches.delete(name); });
+            });
+        }
+        // Clear SW cache and force reload from network
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ action: 'clearCache' });
+        }
+    } catch(e) {}
     var input = document.getElementById('dateInput');
     var oldVal = input.value || '';
     var timePart = oldVal.match(/T(\d{2}:\d{2})/);
@@ -217,7 +232,14 @@ function goToCurrentWeek() {
     var p = function(n) { return String(n).padStart(2,'0'); };
     var t = timePart ? timePart[1] : p(ist.getHours()) + ':' + p(ist.getMinutes());
     input.value = ist.getFullYear() + '-' + p(ist.getMonth()+1) + '-' + p(ist.getDate()) + 'T' + t;
+    // Add cache-busting to fetch
     input.dispatchEvent(new Event('change'));
+    // Force re-fetch hadiya and members with network
+    try {
+        var today = input.value;
+        if (typeof refreshUserDropdown === 'function') refreshUserDropdown(today);
+        if (typeof fetchHadiyaDetails === 'function') setTimeout(function() { fetchHadiyaDetails(today); }, 100);
+    } catch(e) {}
 }
 
 function hideHadiya() {
@@ -258,10 +280,10 @@ function displayHadiya(res) {
     }
     
     // Apply color class
-    var accentColor = '#58a6ff';
+    var accentColor = '#34d399';
     if (isCurrentWeek) {
         hadiyaBox.classList.add('current-week');
-        accentColor = '#58a6ff';
+        accentColor = '#34d399';
     } else if (cur.weekEndDate && new Date(cur.weekEndDate) < new Date()) {
         hadiyaBox.classList.add(isCompleted ? 'past-week-completed' : 'past-week');
         accentColor = isCompleted ? '#3fb950' : '#8b949e';
@@ -419,7 +441,7 @@ function displayHadiya(res) {
 }
 
 function updateHadiyaStatusUI(newStatus) {
-    const dateVal = document.getElementById('dateInput').value;
+    const dateVal = (currentHadiyaDetails && currentHadiyaDetails.current && currentHadiyaDetails.current.startDate) || document.getElementById('dateInput').value;
     if (!dateVal) return;
     window.appApi.withSuccessHandler(function(r) {
         if (r.success) {
@@ -482,7 +504,7 @@ function loadExistingDedications() {
 function renderDedicationEntries() {
     var container = document.getElementById('dedicationListContainer');
     var html = '';
-    var tBtnStyle = 'background:none;border:1px solid #30363d;border-radius:4px;color:#79c0ff;font-size:0.7rem;padding:4px 8px;margin-bottom:6px;margin-top:2px;cursor:pointer;';
+    var tBtnStyle = 'background:none;border:1px solid #30363d;border-radius:4px;color:#6ee7b7;font-size:0.7rem;padding:4px 8px;margin-bottom:6px;margin-top:2px;cursor:pointer;';
     var arrBtnStyle = 'background:none;border:1px solid #30363d;border-radius:4px;color:#8b949e;font-size:0.75rem;padding:2px 8px;cursor:pointer;';
     var delBtnStyle = 'background:none;border:1px solid #f87171;border-radius:4px;color:#f87171;font-size:0.7rem;padding:3px 8px;cursor:pointer;';
     var trashSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
@@ -504,7 +526,7 @@ function renderDedicationEntries() {
 
                 <div style="margin:8px 0 4px; display:flex; align-items:center; justify-content:space-between;">
                     <label for="dedHasIntention${idx}" style="font-size:0.75rem; color:#c9d1d9; cursor:pointer;">Has Intention / நோக்கம் உள்ளது</label>
-                    <input type="checkbox" id="dedHasIntention${idx}" onchange="toggleIntentionFields(${idx})" ${entry.hasIntention ? 'checked' : ''} style="accent-color:#79c0ff; width:16px; height:16px;">
+                    <input type="checkbox" id="dedHasIntention${idx}" onchange="toggleIntentionFields(${idx})" ${entry.hasIntention ? 'checked' : ''} style="accent-color:#6ee7b7; width:16px; height:16px;">
                 </div>
 
                 <div id="intentionFields${idx}" style="${entry.hasIntention ? '' : 'display:none;'}">
@@ -549,7 +571,7 @@ function renderDedicationEntries() {
     if (isEditingDedication) {
         toggleHtml = '<div style="margin-bottom:8px;"><button onclick="cancelDedicationEdit()" style="background:none;border:1px solid #f87171;border-radius:6px;color:#f87171;padding:6px 14px;font-size:0.8rem;cursor:pointer;font-family:inherit;">✕ Cancel Editing</button></div>';
     } else if (dedicationEntries.length > 0) {
-        toggleHtml = '<div style="margin-bottom:8px;"><button onclick="enableDedicationEdit()" style="background:none;border:1px solid #79c0ff;border-radius:6px;color:#79c0ff;padding:6px 14px;font-size:0.8rem;cursor:pointer;font-family:inherit;">✏️ Edit</button></div>';
+        toggleHtml = '<div style="margin-bottom:8px;"><button onclick="enableDedicationEdit()" style="background:none;border:1px solid #6ee7b7;border-radius:6px;color:#6ee7b7;padding:6px 14px;font-size:0.8rem;cursor:pointer;font-family:inherit;">✏️ Edit</button></div>';
     }
     container.innerHTML = toggleHtml + (html || '<div style="font-size:0.8rem;color:#8b949e;">No dedications added yet.</div>');
 }
@@ -631,7 +653,7 @@ function dragOver(event, idx) {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     if (dragSourceIdx !== idx) {
-        event.target.style.borderColor = '#79c0ff';
+        event.target.style.borderColor = '#6ee7b7';
     }
 }
 
