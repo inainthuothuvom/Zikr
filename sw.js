@@ -1,4 +1,4 @@
-var CACHE_NAME = 'sorgathin-pathai-v3';
+var CACHE_NAME = 'sorgathin-pathai-v4';
 var urlsToCache = [
     './',
     './index.html',
@@ -40,19 +40,19 @@ self.addEventListener('fetch', function(event) {
         return;
     }
     event.respondWith(
-        caches.match(event.request).then(function(response) {
-            if (response) return response;
-            return fetch(event.request).then(function(fetchRes) {
-                // Cache new resources dynamically
-                if (fetchRes && fetchRes.status === 200 && fetchRes.type === 'basic') {
-                    var clone = fetchRes.clone();
-                    caches.open(CACHE_NAME).then(function(cache) {
-                        cache.put(event.request, clone);
-                    });
-                }
-                return fetchRes;
-            }).catch(function() {
-                // Offline fallback
+        fetch(event.request).then(function(fetchRes) {
+            // Cache new resources dynamically
+            if (fetchRes && fetchRes.status === 200 && fetchRes.type === 'basic') {
+                var clone = fetchRes.clone();
+                caches.open(CACHE_NAME).then(function(cache) {
+                    cache.put(event.request, clone);
+                });
+            }
+            return fetchRes;
+        }).catch(function() {
+            // Offline: fall back to cache, then to the app shell
+            return caches.match(event.request).then(function(cached) {
+                if (cached) return cached;
                 return caches.match('./index.html');
             });
         })

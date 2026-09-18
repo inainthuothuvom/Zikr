@@ -202,6 +202,31 @@ function goToCurrentWeek() {
     resetAssignmentDetails();
 }
 
+function hardRefresh() {
+    goToCurrentWeek();
+    try {
+        var jobs = [];
+        if ('caches' in window) {
+            jobs.push(caches.keys().then(function(names) {
+                return Promise.all(names.map(function(name) { return caches.delete(name); }));
+            }));
+        }
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            jobs.push(new Promise(function(resolve) {
+                try { navigator.serviceWorker.controller.postMessage({ action: 'clearCache' }); } catch(e) {}
+                resolve();
+            }));
+        }
+        Promise.all(jobs).then(function() {
+            location.reload();
+        }).catch(function() {
+            location.reload();
+        });
+    } catch(e) {
+        location.reload();
+    }
+}
+
 window.onload = function() {
     initConnMonitor();
     document.getElementById('dateInput').min = '2026-08-14T00:00';

@@ -207,41 +207,6 @@ function navigateHadiya(dir) {
     input.dispatchEvent(new Event('change'));
 }
 
-function goToCurrentWeek() {
-    // Clear all caches so latest data is fetched
-    try {
-        if (typeof fetchedStateCache !== 'undefined') fetchedStateCache = null;
-        if (typeof currentHadiyaDetails !== 'undefined') currentHadiyaDetails = null;
-        if (typeof rawReportData !== 'undefined') rawReportData = [];
-        if ('caches' in window) {
-            caches.keys().then(function(names) {
-                names.forEach(function(name) { caches.delete(name); });
-            });
-        }
-        // Clear SW cache and force reload from network
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ action: 'clearCache' });
-        }
-    } catch(e) {}
-    var input = document.getElementById('dateInput');
-    var oldVal = input.value || '';
-    var timePart = oldVal.match(/T(\d{2}:\d{2})/);
-    var now = new Date();
-    var IST_MS = 5.5 * 3600000;
-    var ist = new Date(now.getTime() + now.getTimezoneOffset() * 60000 + IST_MS);
-    var p = function(n) { return String(n).padStart(2,'0'); };
-    var t = timePart ? timePart[1] : p(ist.getHours()) + ':' + p(ist.getMinutes());
-    input.value = ist.getFullYear() + '-' + p(ist.getMonth()+1) + '-' + p(ist.getDate()) + 'T' + t;
-    // Add cache-busting to fetch
-    input.dispatchEvent(new Event('change'));
-    // Force re-fetch hadiya and members with network
-    try {
-        var today = input.value;
-        if (typeof refreshUserDropdown === 'function') refreshUserDropdown(today);
-        if (typeof fetchHadiyaDetails === 'function') setTimeout(function() { fetchHadiyaDetails(today); }, 100);
-    } catch(e) {}
-}
-
 function hideHadiya() {
     document.getElementById('hadiyaBox').style.display = "none";
     var shareBtn = document.getElementById('hadiyaShareBtn');
