@@ -627,9 +627,9 @@ function copyHadiyaNoteToClipboard() {
 
     var tHadiyaSub = 'ஹதியா நிறைவேற்றப்பட்டது';
     var tWeek = 'வாரம்';
-    var tAlhamdulillah = 'அல்ஹம்துலில்லாஹ், இந்த வாரத்திற்கான அனைத்து ஓதுதல்களும் திட்டமிட்டபடி சரியான நேரத்தில் வெற்றிகரமாக நிறைவு பெற்றுள்ளன!';
+    var tAlhamdulillah = 'அல்ஹம்துலில்லாஹ், இந்த வாரத்திற்கான ஜிகர் ஓதுதல் திட்டமிட்டபடி சரியான நேரத்தில் வெற்றிகரமாக நிறைவு பெற்றுள்ளது!';
     var tJazak = 'ஜஜாக்குமுல்லாஹு கைரான், உங்களின் விரைவான அர்ப்பணிப்பிற்கு நன்றி!';
-    var tDedicated = 'இந்த வார முழுமையான கத்தம் ஹதியா கீழே உள்ள உறுப்பினரால் நிறைவேற்றப்பட்டு அர்ப்பணிக்கப்படுகிறது:';
+    var tDedicated = 'இந்த வார முழுமையான ஜிகர் ஹதியா கீழே உள்ள உறுப்பினரால் நிறைவேற்றப்பட்டு அர்ப்பணிக்கப்படுகிறது:';
     var tDua = 'யா அல்லாஹ், எங்களின் ஒருங்கிணைந்த முயற்சிகளை ஏற்றுக்கொண்டு, ஈடுபட்ட அனைவருக்கும் மகத்தான பரக்கத்தை வழங்கி, அனைத்து ஓதுனர்களுக்கும் இம்மையிலும் மறுமையிலும் உயர்ந்த அந்தஸ்தை வழங்குவாயாக்!';
 
     captureDiv.innerHTML =
@@ -659,7 +659,7 @@ function copyHadiyaNoteToClipboard() {
         '<div style="font-size:0.85rem; color:#c9d1d9; line-height:1.7; text-align:start; margin-bottom:4px;">' +
         'Jazakumullahu Khairan for your swift dedication!</div>' +
         '<div style="font-size:0.85rem; color:#c9d1d9; line-height:1.7; text-align:start; margin-bottom:16px;">' +
-        'The Khatam Hadiya is dedicated to and completed by the above member.</div>' +
+        'The Zikr Hadiya is dedicated to and completed by the above member.</div>' +
         '<div style="border:none; border-top:1px solid #21262d; margin-top:12px; margin-bottom:14px;"></div>' +
         dedHtml +
         '<div style="border:none; border-top:1px solid #21262d; margin-bottom:14px;"></div>' +
